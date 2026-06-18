@@ -1,0 +1,26 @@
+node_modules
+dist
+dist-ssr
+*.local
+*.tsbuildinfo
+
+# Never commit registry tokens / secrets
+.npmrc
+.env
+.env.*
+*.pem
+*.key
+
+# Tooling scratch
+.playwright-mcp
+test-results
+playwright-report
+
+# Editor
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea
+
+# Local scratch / working notes
+.context

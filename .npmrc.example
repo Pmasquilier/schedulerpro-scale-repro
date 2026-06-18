@@ -1,0 +1,17 @@
+# OPTIONAL — only needed if the pinned trial package has expired and fails to render.
+#
+# This repo depends on the trial build of Scheduler Pro by default
+# (see package.json: "npm:@bryntum/schedulerpro-trial@7.3.1"). Trial builds carry a
+# runtime expiration date. If the scheduler refuses to render, switch to your own
+# licensed registry access:
+#
+#   1. Copy this file to `.npmrc` (which is gitignored — never commit a token).
+#   2. Fill in your Bryntum registry token below.
+#   3. In package.json, change the "@bryntum/schedulerpro" dependency from
+#      "npm:@bryntum/schedulerpro-trial@7.3.1" to "7.3.1" (the licensed build).
+#   4. Re-run `npm install`.
+#
+# Use YOUR OWN Bryntum registry credentials.
+
+@bryntum:registry=https://npm.bryntum.com
+//npm.bryntum.com/:_authToken=YOUR_BRYNTUM_REGISTRY_TOKEN
