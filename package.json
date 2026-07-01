@@ -16,6 +16,10 @@
     "@bryntum/scheduler-react": "7.3.2",
     "@bryntum/schedulerpro": "npm:@bryntum/schedulerpro-trial@7.3.1",
     "@bryntum/schedulerpro-react": "7.3.2",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/icons-material": "^9.1.1",
+    "@mui/material": "^9.1.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

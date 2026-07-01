@@ -1,16 +1,12 @@
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
+import { LazyOrchestrationRepro } from './repro/LazyOrchestrationRepro';
 
-// NOTE: intentionally NOT wrapped in <StrictMode>. This is a perf-measurement harness; in dev,
-// StrictMode double-invokes effects, which would double every load() / loadInlineData() and
-// distort the mount/reconcile timings we are here to measure.
-async function bootstrap() {
-  // MSW mocks the REST backend (POST /api/events/batch) so the CrudManager strategy can sync
-  // through a REAL fetch + syncUrl — the production-shaped Option A — with no server running.
-  const { worker } = await import('./mocks/browser');
-  await worker.start({ onUnhandledRequest: 'bypass', quiet: true });
-
-  createRoot(document.getElementById('root')!).render(<App />);
-}
-
-void bootstrap();
+// NOTE: intentionally NOT wrapped in <StrictMode>. This is a measurement harness; in dev,
+// StrictMode double-invokes effects, which would double every load() and distort the timings
+// (and the request counts we watch for Behavior B).
+// Two independent repros share this entry:
+//   - default     → perf/accumulation repro (bug #1, eventStore.lazyLoad:false)
+//   - ?repro=lazy → lazy-load ORCHESTRATION repro (A/B/C, eventStore.lazyLoad:true)
+const lazyRepro = new URLSearchParams(window.location.search).get('repro') === 'lazy';
+createRoot(document.getElementById('root')!).render(lazyRepro ? <LazyOrchestrationRepro /> : <App />);
