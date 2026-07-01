@@ -42,10 +42,11 @@ async function countWhenMetricAppears(page: import('@playwright/test').Page): Pr
   );
 }
 
-for (const route of ['#/lazy/pro', '#/non-lazy/pro', '#/lazy/plain', '#/non-lazy/plain'] as const) {
+// Single strategy now: the windowed CrudManager (PR #12440). One route, no hash.
+for (const route of ['/'] as const) {
   test(`mount metric reflects fully-painted DOM (${route})`, async ({ page }) => {
     // Navigate before the metric is set, so the in-page observer catches the flip.
-    await page.goto(`/${route}`, { waitUntil: 'domcontentloaded' });
+    await page.goto(route, { waitUntil: 'domcontentloaded' });
 
     const countAtMetric = await countWhenMetricAppears(page);
 
