@@ -1,9 +1,10 @@
 # Scheduler Pro windowed-CrudManager — scroll-back accumulation reproduction
 
 A minimal reproduction of the **windowed CrudManager** loading strategy we shipped (roger-platform
-PR #12440), isolating one problem: **scrolling deep, then back to the top, lags hard.** Everything
-else from the earlier multi-strategy harness has been removed — this repo is *only* that
-implementation.
+PR #12440). The main app isolates the headline problem — **scrolling deep, then back to the top, lags
+hard** — and a second harness (`src/repro`) reproduces the lazy-load **orchestration** behaviors
+(autoLoad timing, external-filter reload). Together they back the Bryntum forum follow-up in
+`.context/forum-post.md`, which bundles the four problems below.
 
 ## The contract (what the PR does)
 
@@ -67,13 +68,19 @@ A single accumulated run has been seen to stall a frame for **>3 s**. The trace 
 **CLS of 3.6** during the scroll-back — large layout shifts as the engine re-lays-out the graph.
 Baseline is buttery; the *only* variable is how many windows have accumulated.
 
-## Question for Bryntum
+## Questions for Bryntum
 
-See `.context/forum-post.md` (perf/accumulation) and `.context/forum-post-lazy.md` (A/B/C
-orchestration) — follow-ups to
-[forum thread t=35495](https://forum.bryntum.com/viewtopic.php?t=35495): given lazyLoad never evicts,
-what is the supported sliding-window / `unload()` pattern, and how does it interact with ride-along
-events and scroll-back re-loading?
+See `.context/forum-post.md` — a single follow-up to
+[forum thread t=35495](https://forum.bryntum.com/viewtopic.php?t=35495) bundling the four problems this
+repo demonstrates:
+
+1. **Scroll DOWN** — per-commit cost grows with the accumulated (resident) graph; nothing is evicted.
+2. **Scroll BACK** — re-layout over the whole accumulated graph janks.
+3. **autoLoad no-ops** when the project is built before the widget mounts (framework integration).
+4. **External filter reload** — reloading a lazy store on a React-state filter Bryntum never sees.
+
+Core ask: given `lazyLoad` never evicts, what is the supported sliding-window / `unload()` pattern, and
+how does it interact with ride-along events and scroll-back re-loading?
 
 ## Stack
 
