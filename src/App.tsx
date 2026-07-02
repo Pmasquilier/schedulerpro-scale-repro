@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import './app.css';
 import { DATASET_SIZES, type DatasetSize } from './types';
 import { generateDataset } from './api/dataGenerator';
 import { backend } from './api/fakeBackend';
-import { perfMeter } from './scheduler/perfMeter';
 import { WindowedScheduler, type RendererMode } from './scheduler/WindowedScheduler';
+import { BryntumExampleScheduler } from './scheduler/BryntumExampleScheduler';
 import { toEventStoreRow, toResourceStoreRow } from './scheduler/schedulerMapper';
 import type { RowRange, SchedulerStores } from './scheduler/schedulerTypes';
 
@@ -19,46 +19,24 @@ const readFlag = (key: string): boolean => {
   }
 };
 
-function MetricsBand() {
-  const perf = useSyncExternalStore(perfMeter.subscribe, perfMeter.getSnapshot);
-  const fmt = (n: number | null) => (n == null ? '—' : `${n.toLocaleString('en-US')} ms`);
-  return (
-    <div className="metrics">
-      <Metric label="Mount" value={fmt(perf.mountMs)} />
-      <Metric
-        label="EventModels"
-        value={`${perf.eventModels.toLocaleString('en-US')} / ${perf.totalEvents.toLocaleString('en-US')}`}
-      />
-    </div>
-  );
-}
-
-function Metric({ label, value }: { label: string; value: string }) {
-  const testid = label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-  return (
-    <div className="metric">
-      <span className="metric-label">{label}</span>
-      <span className="metric-value" data-testid={`metric-${testid}`}>
-        {value}
-      </span>
-    </div>
-  );
-}
-
 // Benchmark knobs via URL so each config is a plain URL (no localStorage reload dance):
 //   ?res=500&epr=40   → dataset = 500 resources × 40 events/resource (density = epr)
-//   ?renderer=dom|react|mui → the event-bar rendering path under test (also switchable live in the header)
+//   ?renderer=dom|react|mui|bryntum → the path under test (also switchable live in the header)
+// dom/react/mui are event-bar renderers on the roger windowed scheduler; `bryntum` is a DIFFERENT axis — the whole
+// scheduler swaps for Bryntum's own shipped example config (BryntumExampleScheduler). Hence the separator in the dropdown.
 const BENCH = new URLSearchParams(window.location.search);
 const benchRes = Number(BENCH.get('res'));
 const benchEpr = Number(BENCH.get('epr'));
 const RENDERER_MODES: RendererMode[] = ['dom', 'react', 'mui'];
-const urlRenderer = BENCH.get('renderer') as RendererMode | null;
-const initialRenderer: RendererMode = urlRenderer && RENDERER_MODES.includes(urlRenderer) ? urlRenderer : 'mui';
+type Mode = RendererMode | 'bryntum';
+const MODES: Mode[] = [...RENDERER_MODES, 'bryntum'];
+const urlRenderer = BENCH.get('renderer') as Mode | null;
+const initialMode: Mode = urlRenderer && MODES.includes(urlRenderer) ? urlRenderer : 'mui';
 const benchTotal = BENCH.get('total') === '1'; // ?total=1 → send `total` so the lazy plugin can window+evict
 
 export function App() {
   const [sizeKey, setSizeKey] = useState<string>('20k');
-  const [renderer, setRenderer] = useState<RendererMode>(initialRenderer);
+  const [mode, setMode] = useState<Mode>(initialMode);
   // Employee-name filter, driven from the UI (not the URL). It's EXTERNAL app state Bryntum can't see, so applying it
   // means reloading the window through our loader (below) — the "not applicable to store → reload" case, done right:
   // the whole dataset is filtered before slicing, so results are complete (unlike an in-store filter on a lazy store).
@@ -77,10 +55,6 @@ export function App() {
     backend.setDataset(d.resources, d.events);
     return d;
   }, [size]);
-
-  useEffect(() => {
-    perfMeter.reset(dataset.events.length);
-  }, [dataset]);
 
   // The ride-along window loader: slice the resource axis, then bundle the events for exactly those
   // resources into the SAME response (no separate event fetch). NO `total` is returned — end-of-data
@@ -150,21 +124,25 @@ export function App() {
 
           <label className="control">
             Bar renderer
-            <select value={renderer} onChange={(e) => setRenderer(e.target.value as RendererMode)}>
+            <select value={mode} onChange={(e) => setMode(e.target.value as Mode)}>
               {RENDERER_MODES.map((m) => (
                 <option key={m} value={m}>
                   {m}
                 </option>
               ))}
+              <option disabled>──────────</option>
+              <option value="bryntum">bryntum example</option>
             </select>
           </label>
-
-          <MetricsBand />
         </div>
       </header>
 
       <main className="scheduler-area">
-        <WindowedScheduler key={`${size.key}-${renderer}`} dataSource={dataSource} month={dataset.month} renderer={renderer} />
+        {mode === 'bryntum' ? (
+          <BryntumExampleScheduler key={`${size.key}-bryntum`} dataSource={dataSource} month={dataset.month} />
+        ) : (
+          <WindowedScheduler key={`${size.key}-${mode}`} dataSource={dataSource} month={dataset.month} renderer={mode} />
+        )}
       </main>
     </div>
   );
