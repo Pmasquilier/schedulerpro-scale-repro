@@ -96,3 +96,42 @@ trigger). Setting `eventStore.lazyLoad: false` removes the 2nd request (verified
 Because the filter never enters Bryntum's params, the only reload path is a React `useEffect` (depending on the
 serialized filter) that imperatively calls `resourceStore.load()`. It works, but it is the same effect that does
 the initial load (see A) and it re-triggers B on every change — which feels redundant with the lazy machinery.
+
+---
+
+# Filtering & autoLoad repro (forum t=35495)
+
+Separate, **non-lazy** demo answering two Bryntum replies in [t=35495](https://forum.bryntum.com/viewtopic.php?t=35495).
+One root cause: **Bryntum only observes its own store, never your React state.** Same `sendRequest`-logging
+transport as above, but every store loads its full set in one response (no windowing).
+
+- `FilterAutoLoadRepro.tsx` — the harness: an in-store name filter, an external location filter, an autoLoad-only toggle.
+- `lazyData.ts` → `fetchAllByLocation()` — returns the FULL location-filtered set (no offset/limit).
+
+Run: `http://localhost:5173/?repro=filter` — watch `[filter]` / `[sendRequest]` in the console.
+
+## Reply 1 — "add a filter to the store; if it's not applicable to the store, reload"
+
+- **In-store filter** (the `name` field, already loaded): `resourceStore.filter({ id, filterBy })` → filters
+  **instantly, zero requests**. This is filtering *without* a reload — Bryntum's recommended path.
+- **External filter** (`location`, a server-side param the store never holds): `store.filter()` can't express
+  it, so the data must be **reloaded**. Since the param lives in React state, the reload is driven from a
+  `useEffect`. Non-lazy reload goes through **`project.load()`** (the CrudManager) — a bare `resourceStore.load()`
+  is a no-op here (no transport); only the lazy repro can call `resourceStore.load()` because its lazyLoad plugin
+  intercepts it.
+
+## Reply 2 — "all our demos use autoLoad, it worked as expected"
+
+`autoLoad: true` here too, and it **does** load the initial data at mount (their claim holds). But autoLoad is a
+**one-shot at construction**; it can't observe a later React-state filter change. Check "autoLoad only", change
+the location → the grid goes **stale**. That gap is exactly why a `useEffect` reload is required.
+
+## Verified behavior (dev, 200 resources / 600 events)
+
+| Action | resourceStore.count | `[sendRequest]` | Meaning |
+|---|---|---|---|
+| Mount (autoLoad) | 200 | 1 | autoLoad loads initial data ✓ |
+| In-store filter `name`="Employee 1" | 111 | **0** | store filter, no reload ✓ |
+| External filter `location`=Geneva | 67 | **1** | reload via `useEffect` → `project.load()` ✓ |
+| autoLoad-only + `location`=Zurich | 200 (stale) | **0** | one-shot can't react to React state ✓ |
+| Re-enabled + `location`=Bern | 66 | **1** | reload resumes ✓ |
