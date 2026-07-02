@@ -42,6 +42,22 @@ export const setLatency = (ms: number): void => {
 const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 /**
+ * Non-windowed backend for the filter/autoLoad repro (t=35495): apply ONLY the external location filter (a server-side
+ * param the client store never holds), return the FULL matching set in one response — no offset/limit. `name` rides
+ * along so the client can demonstrate an IN-STORE filter (resourceStore.filter) on already-loaded data.
+ */
+export const fetchAllByLocation = async (location: Location | 'all') => {
+    if (latencyMs) await delay(latencyMs);
+    const resources = location === 'all' ? RESOURCES : RESOURCES.filter((r) => r.location === location);
+    const ids = new Set(resources.map((r) => r.id));
+    const events = EVENTS.filter((e) => ids.has(e.resourceId));
+    return {
+        resources: resources.map((r) => ({ id: r.id, name: r.name })),
+        events,
+    };
+};
+
+/**
  * The fake backend: apply the EXTERNAL location filter, slice the resource axis by offset/limit, then bundle THAT
  * window's events + resourceTimeRanges into the same response (ride-along, no date-axis windowing).
  */

@@ -35,10 +35,17 @@ const DELAY_MOUNT = new URLSearchParams(window.location.search).get('delayMount'
 export function LazyOrchestrationRepro() {
     const schedulerRef = useRef<BryntumSchedulerProInstance>(null);
 
-    // EXTERNAL filter state — lives in React, NEVER passed through Bryntum's params (the loader closes over it via a ref).
+    // EXTERNAL filter state (Problem 4) — lives in React, NEVER passed through Bryntum's params (the loader closes over
+    // it via a ref). The only way to apply it is an imperative reload.
     const [location, setLocation] = useState<Location | 'all'>('all');
     const locationRef = useRef(location);
     locationRef.current = location;
+
+    // IN-STORE filter (the "add a filter to the store" reply). On a NON-lazy store this is instant + zero requests
+    // (see ?repro=filter). On THIS lazy store it is NOT free: filter() fires a remote-filter request AND still prunes
+    // only the loaded window (partial). That's the whole point — "add a filter to the store" doesn't cleanly apply to a
+    // lazy store, which is why an EXTERNAL filter must reload instead.
+    const [nameQuery, setNameQuery] = useState('');
 
     // Widget-mount gate (Behavior-A timing test). When DELAY_MOUNT, the widget appears ~1.5s after the project is built.
     const [mounted, setMounted] = useState(!DELAY_MOUNT);
@@ -88,6 +95,20 @@ export function LazyOrchestrationRepro() {
         if (result instanceof Promise) result.catch((e: unknown) => console.error(e));
     }, [project, location, autoLoadOnly]);
 
+    // "What is external filter?" — a plain resourceStore.filter(). Watch the console: on this LAZY store it fires a
+    // remote-filter [sendRequest] AND still only prunes the loaded window (partial). So even the "just filter the store"
+    // path is neither free nor complete here — which is exactly why `location` (Problem 4) reloads instead.
+    useEffect(() => {
+        const store = project.resourceStore as unknown as { filter: (cfg: object) => void; clearFilters: () => void };
+        const q = nameQuery.trim().toLowerCase();
+        if (!q) {
+            store.clearFilters();
+            return;
+        }
+        console.log('[repro] resourceStore.filter() — lazy store: triggers a remote request + prunes loaded window only. q =', q);
+        store.filter({ id: 'name-search', filterBy: (r: { name: string }) => String(r.name).toLowerCase().includes(q) });
+    }, [project, nameQuery]);
+
     // Date axis: month window (end exclusive → +1 day).
     useEffect(() => {
         const instance = schedulerRef.current?.instance;
@@ -108,11 +129,19 @@ export function LazyOrchestrationRepro() {
         <div className="app">
             <header className="header">
                 <div className="header-row">
-                    <strong className="title">Scheduler Pro — lazy-load orchestration repro (A / B / C)</strong>
+                    <strong className="title">Scheduler Pro — lazy-load orchestration repro (forum Problems 3 &amp; 4)</strong>
                 </div>
                 <div className="header-row controls">
                     <label className="control">
-                        Location filter (external React state)
+                        In-store filter — name (resourceStore.filter — lazy: remote req + partial)
+                        <input
+                            value={nameQuery}
+                            placeholder="e.g. Employee 1"
+                            onChange={(e) => setNameQuery(e.target.value)}
+                        />
+                    </label>
+                    <label className="control">
+                        External filter — location (Problem 4: needs reload)
                         <select value={location} onChange={(e) => setLocation(e.target.value as Location | 'all')}>
                             <option value="all">All ({LOCATIONS.length} locations)</option>
                             {LOCATIONS.map((l) => (
@@ -124,7 +153,7 @@ export function LazyOrchestrationRepro() {
                     </label>
                     <label className="control">
                         <input type="checkbox" checked={autoLoadOnly} onChange={(e) => setAutoLoadOnly(e.target.checked)} />
-                        Behavior A: autoLoad only (no manual load)
+                        autoLoad only (Problem 3: no manual load)
                     </label>
                     <button type="button" onClick={forceLoad}>
                         Force load()
