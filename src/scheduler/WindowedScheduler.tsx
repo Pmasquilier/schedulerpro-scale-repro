@@ -10,7 +10,6 @@ import { applicationTheme, renderThemedEventBar } from './ThemedEventBar';
 import { ReactEventBar, deriveBarMeta } from './ReactEventBar';
 import { useSchedulerProjectModel } from './useSchedulerProjectModel';
 import type { SchedulerDataSource } from './schedulerTypes';
-import { afterNextPaint, afterRenderSettled, perfMeter } from './perfMeter';
 
 // A/B/C variable: the ONLY thing that changes across benchmark runs. Same bar CONTENT (deriveBarMeta) + same
 // nested STRUCTURE across all three — so the delta isolates the rendering engine, not the data or tree depth.
@@ -105,40 +104,6 @@ export function WindowedScheduler({ dataSource, month, renderer }: WindowedSched
         const result = instance.setTimeSpan(new Date(month.start), addDays(new Date(month.end), 1));
         if (result instanceof Promise) result.catch((e: unknown) => console.error(e));
     }, [month.start, month.end]);
-
-    // Live EventModels metric: every window that loads pushes events into the engine and NEVER evicts them, so this
-    // count only climbs as you scroll. It is the smoking gun for the accumulation problem.
-    useEffect(() => {
-        const store = project.eventStore as unknown as { count: number; on: (cfg: object) => () => void };
-        const update = () => perfMeter.setEventModels(store.count);
-        const detach = store.on({ change: update, refresh: update, thisObj: store });
-        return () => detach?.();
-    }, [project]);
-
-    // HARNESS-ONLY: measure first paint of the initial window.
-    useEffect(() => {
-        let cancelled = false;
-        perfMeter.startMount();
-        void (async () => {
-            let instance = schedulerRef.current?.instance;
-            for (let i = 0; i < 60 && !instance; i++) {
-                await afterNextPaint();
-                instance = schedulerRef.current?.instance;
-            }
-            if (cancelled || !instance) return;
-            const root = (instance as unknown as { element?: Element }).element;
-            const eventStore = instance.eventStore as unknown as { count?: number; isLoading?: boolean };
-            const resourceStore = instance.resourceStore as unknown as { isLoading?: boolean };
-            const isBusy = () => !eventStore.count || Boolean(eventStore.isLoading) || Boolean(resourceStore.isLoading);
-            const paintedAt = root ? await afterRenderSettled(root, { isBusy }) : performance.now();
-            if (cancelled) return;
-            perfMeter.endMount(paintedAt);
-            perfMeter.setEventModels(eventStore.count ?? 0);
-        })();
-        return () => {
-            cancelled = true;
-        };
-    }, [dataSource.reloadOn]);
 
     // Top-level ThemeProvider mirrors the real wrapper (consumer components stay theme-agnostic). The PER-BAR
     // ThemeProvider inside renderThemedEventBar is the costly part — Bryntum renders bars in detached DOM.
