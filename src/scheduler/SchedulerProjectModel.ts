@@ -47,9 +47,14 @@ export const createLoadHandler =
     (load: (rowRange: RowRange) => Promise<SchedulerStores>): LoadHandler =>
     async ({ params }) => {
         try {
-            const { resources, events, resourceTimeRanges } = await load({ offset: params.startIndex ?? 0, limit: params.count ?? 0 });
-            // No `total`: end-of-data is inferred from a short page (rows < count).
-            return { success: true, resources: { rows: resources }, events: { rows: events }, resourceTimeRanges: { rows: resourceTimeRanges } };
+            const { resources, events, resourceTimeRanges, total } = await load({ offset: params.startIndex ?? 0, limit: params.count ?? 0 });
+            // `total` present only under the ?total=1 experiment; otherwise end-of-data is inferred from a short page.
+            return {
+                success: true,
+                resources: { rows: resources, ...(total != null ? { total } : {}) },
+                events: { rows: events },
+                resourceTimeRanges: { rows: resourceTimeRanges },
+            };
         } catch (error) {
             // Bryntum drives load() internally on scroll, past the wrapper's mount-only .catch — without this a failed
             // window load leaves a silently incomplete grid instead of a toast. Rethrow so the transport still fails the load.

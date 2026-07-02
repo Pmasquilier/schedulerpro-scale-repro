@@ -107,6 +107,22 @@ body,
   position: relative;
 }
 
+/* Prod-like solid bar fill. The bar content (.nb/.rb/MUI) is white text; the stockholm-light default event
+   fill is a pale tint on which white is invisible. A solid green matches prod and makes the content legible.
+   Scoped under .scheduler-area to outrank the theme's own .b-sch-event rule (equal-specificity, load-order). */
+.scheduler-area .b-sch-event {
+  background-color: #3fae74;
+  border-color: #2f9d64;
+}
+
+/* Small type so the label / start / end lines fit a narrow day column (~40px), like prod's truncated
+   "Kit.. / 11:00 / 19:00". The default 16px inherited font clips to nothing at this width. */
+.nb,
+.rb {
+  font-size: 10px;
+  line-height: 1.3;
+}
+
 /* Insight overlay classes — applied to the event bar (render-time in lazy, native data in
    non-lazy). A colored left edge keeps the bar label legible. */
 .b-sch-event.insight-low {
@@ -117,4 +133,124 @@ body,
 }
 .b-sch-event.insight-high {
   box-shadow: inset 4px 0 0 0 #d64545;
+}
+
+/* Plain-React rich bar (renderer=react): nested tree mirroring the MUI bar, styled via classes not emotion. */
+.rb {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  padding: 0 6px;
+  color: #fff;
+  overflow: hidden;
+}
+.rb[data-severity='warning'] {
+  border-left: 3px solid #ed6c02;
+  padding-left: 4px;
+}
+.rb-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.rb-label {
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rb-time {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.9;
+}
+.rb-gutter {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  display: flex;
+  align-items: center;
+}
+.rb-icons {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.rb-icon {
+  flex: 0 0 auto;
+}
+.rb--narrow {
+  gap: 4px;
+  justify-content: space-between;
+}
+.rb-narrow-label {
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* DomConfig bar (renderer=dom): same shape as .rb but raw DOM, no React root. */
+.nb {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  padding: 0 6px;
+  color: #fff;
+  overflow: hidden;
+}
+.nb[data-severity='warning'] {
+  border-left: 3px solid #ed6c02;
+  padding-left: 4px;
+}
+.nb-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.nb-label {
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nb-time {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.9;
+}
+.nb-gutter {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  display: flex;
+  align-items: center;
+}
+.nb-icons {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 10px;
+}
+.nb--narrow {
+  gap: 4px;
+  justify-content: space-between;
+}
+.nb-narrow-label {
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

@@ -22,6 +22,9 @@ export type SchedulerStores = {
     resources: ResourceStoreRow<unknown>[];
     events: EventStoreRow<unknown>[];
     resourceTimeRanges: SchedulerLazyResourceTimeRange[];
+    // EXPERIMENT (?total=1): total resource-row count. Given → StoreLazyLoadPlugin can build a sparse store of `total`
+    // rows (off-window = placeholder, not resident) and evict natively. Omitted → append-only (the shipped behavior).
+    total?: number;
 };
 
 /** Post-JSON.parse shape of a CrudManager lazy-load request; we read only the resource-axis fields. */
