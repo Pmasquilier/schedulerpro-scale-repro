@@ -90,7 +90,14 @@ export function WindowedScheduler({ dataSource, month, renderer }: WindowedSched
     // (Re)load from row 0 on mount and whenever `reloadOn` changes. resourceStore.load() reloads just the resource
     // window (events ride along in the response); offset/limit never enter the signature, so scrolling loads
     // incrementally without resetting.
+    // EXPERIMENT: localStorage.perfAutoLoadOnly='1' skips this manual load, so ONLY the store's autoLoad:true can
+    // trigger the first load. If the grid then stays empty, autoLoad did not fire for a project built before mount.
     useEffect(() => {
+        try {
+            if (localStorage.getItem('perfAutoLoadOnly') === '1') return;
+        } catch {
+            /* ignore */
+        }
         const result = project.resourceStore.load();
         if (result instanceof Promise) {
             result.catch((e: unknown) => console.error(e));
