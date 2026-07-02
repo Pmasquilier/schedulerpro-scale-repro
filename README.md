@@ -31,9 +31,10 @@ the engine graph grows monotonically with how far you've scrolled, and the per-c
 it. Scrolling back to the top then re-commits/re-lays-out over the whole accumulated graph → jank.
 
 `★ Insight ─────────────────────────────────────`
-`EventModels` in the header is the smoking gun: it only ever climbs as you scroll
-(2,000 → 4,000 → 6,000 → … → 12,000 at 300 of 500 rows) and never drops. There is no
-auto-eviction; a sliding window would have to be coded by hand via `store.unload()`.
+The engine's resident event count (`eventStore.count`) is the smoking gun: it only ever climbs as
+you scroll (2,000 → 4,000 → 6,000 → … → 12,000 at 300 of 500 rows) and never drops — see the
+measured table below. There is no auto-eviction; a sliding window would have to be coded by hand
+via `store.unload()`.
 `─────────────────────────────────────────────────`
 
 ## Run
@@ -42,7 +43,11 @@ auto-eviction; a sliding window would have to be coded by hand via `store.unload
 npm install && npm run dev
 ```
 
-Header: dataset size (4k / 20k / 40k), network latency, and live **Mount** / **EventModels** metrics.
+Header: dataset size (4k / 20k / 40k), an employee-name filter, and a **bar renderer** switch —
+`dom` / `react` / `mui` render event bars on the roger windowed scheduler, while `bryntum example`
+swaps the whole scheduler for Bryntum's shipped example config (same loader + data). URL knobs let
+each config be a plain link: `?res=500&epr=40` sizes the dataset, `?renderer=dom|react|mui|bryntum`
+picks the path, `?total=1` hands the lazy plugin a row count so it can window+evict.
 
 ### Second repro: lazy-load orchestration (behaviors A / B / C)
 
