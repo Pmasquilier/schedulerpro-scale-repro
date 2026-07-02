@@ -12,7 +12,10 @@ const RESOURCE_CHUNK_SIZE = 50;
 // client-side beyond the loaded window, so the columns are not sortable.
 const SCHEDULER_PROJECT_CONFIG: ProjectModelConfig = {
     lazyLoad: true,
-    resourceStore: { lazyLoad: { chunkSize: RESOURCE_CHUNK_SIZE } },
+    // autoLoad: true SHOULD trigger the first window load by itself. We test whether it fires when the project is
+    // built (in a React hook) BEFORE the widget mounts — set localStorage.perfAutoLoadOnly='1' to skip our manual
+    // resourceStore.load() and rely on autoLoad alone (see WindowedScheduler).
+    resourceStore: { lazyLoad: { chunkSize: RESOURCE_CHUNK_SIZE }, autoLoad: true },
     // Only the resource axis windows: events + shading arrive bundled in each resource-window response, so these stores
     // must not lazy-load on their own — that fired a second request per reload to re-fetch events for the loaded rows.
     eventStore: { lazyLoad: false },
