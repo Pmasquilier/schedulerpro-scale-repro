@@ -37,19 +37,23 @@ export function generateDataset(size: DatasetSize, ref: Date = new Date()): Gene
   for (let r = 1; r <= size.resources; r++) {
     resources.push({ id: r, name: `Employee ${r}` });
 
-    for (let i = 0; i < size.eventsPerResource; i++) {
-      const day = 1 + Math.floor(rng() * daysInMonth);
-      const startHour = 6 + Math.floor(rng() * 8); // 06:00–13:00
-      const duration = 6 + Math.floor(rng() * 4); // 6–9h
+    // One shift per day: prod parity (one bar per day per employee — a fat, readable bar filling each cell),
+    // rather than a random scatter that leaves some days empty. Resource count stays the scale knob;
+    // eventsPerResource is now implicitly daysInMonth.
+    for (let day = 1; day <= daysInMonth; day++) {
+      // Long shift (~14–16h) so the bar fills most of a wide day column and its content stays readable —
+      // a realistic 9h shift only spans ~37% of the 24h column and clips the label. This is a render repro.
+      const startHour = 6 + Math.floor(rng() * 2); // 06:00–07:00
+      const duration = 14 + Math.floor(rng() * 3); // 14–16h
       const start = new Date(year, month, day, startHour, 0, 0);
       const end = new Date(year, month, day, startHour + duration, 0, 0);
 
       events.push({
-        id: `e-${r}-${i}`,
+        id: `e-${r}-${day}`,
         resourceId: r,
         startDate: start.toISOString(),
         endDate: end.toISOString(),
-        name: `Shift ${i + 1}`,
+        name: `Shift ${day}`,
       });
     }
   }
